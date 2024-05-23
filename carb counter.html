@@ -1,0 +1,466 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Carb Counter</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        .container {
+            width: 90%;
+            max-width: 600px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        table {
+            width: 100%;
+            margin-top: 20px;
+            border-collapse: collapse;
+        }
+        th, td {
+            padding: 10px;
+            text-align: left;
+            border: 1px solid #ddd;
+        }
+        th {
+            background-color: #f2f2f2;
+        }
+        .total {
+            font-weight: bold;
+            margin-top: 20px;
+        }
+        .autocomplete {
+            position: relative;
+            display: inline-block;
+            width: 100%;
+        }
+        .autocomplete input {
+            width: 100%;
+            padding: 10px;
+            box-sizing: border-box;
+        }
+        .autocomplete-items {
+            position: absolute;
+            border: 1px solid #d4d4d4;
+            border-bottom: none;
+            border-top: none;
+            z-index: 99;
+            top: 100%;
+            left: 0;
+            right: 0;
+            max-height: 150px;
+            overflow-y: auto;
+            background-color: #fff;
+        }
+        .autocomplete-items div {
+            padding: 10px;
+            cursor: pointer;
+            background-color: #fff;
+            border-bottom: 1px solid #d4d4d4;
+        }
+        .autocomplete-items div:hover {
+            background-color: #e9e9e9;
+        }
+        @media (max-width: 600px) {
+            .container {
+                width: 100%;
+                padding: 10px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Carb Counter</h1>
+        <div class="autocomplete">
+            <input id="food-input" type="text" placeholder="Type to search...">
+        </div>
+        <br><br>
+        <label for="quantity">Enter Quantity (units):</label>
+        <input type="number" id="quantity" min="0" style="width: 100%; padding: 10px; box-sizing: border-box;">
+        <br><br>
+        <label for="weight">Enter Weight (grams):</label>
+        <input type="number" id="weight" min="0" style="width: 100%; padding: 10px; box-sizing: border-box;">
+        <br><br>
+        <button onclick="addItem()" style="width: 100%; padding: 10px; box-sizing: border-box;">Add Item</button>
+        <table id="meal-table">
+            <thead>
+                <tr>
+                    <th>Item</th>
+                    <th>Quantity</th>
+                    <th>Weight</th>
+                    <th>Carbs</th>
+                </tr>
+            </thead>
+            <tbody>
+                <!-- Items will be added dynamically -->
+            </tbody>
+        </table>
+        <div class="total" id="total-carbs">Total Carbs: 0</div>
+    </div>
+
+    <script>
+        const foodData = [
+            {item: 'animal crackers', carbRatio: 0.79, carbPerUnit: 22},
+			{item: 'annies cheddar bunnies', carbRatio: 0.61, carbPerUnit: 17},
+			{item: 'Apple (without core)', carbRatio: 0.14, carbPerUnit: null},
+			{item: 'Apple mini (whole medium)', carbRatio: 0.1, carbPerUnit: 7.4},
+			{item: 'apple muffin', carbRatio: null, carbPerUnit: 27},
+			{item: 'Applesauce pouch', carbRatio: null, carbPerUnit: 10},
+			{item: 'Avocado', carbRatio: 0.09, carbPerUnit: null},
+			{item: 'Bacon', carbRatio: null, carbPerUnit: null},
+			{item: 'Bacon (sendiks medium thickness)', carbRatio: null, carbPerUnit: null},
+			{item: 'baked beans', carbRatio: 0.22, carbPerUnit: null},
+			{item: 'Baked carrots', carbRatio: 0.12, carbPerUnit: null},
+			{item: 'Baked potatos', carbRatio: 0.22, carbPerUnit: null},
+			{item: 'Baked spaghetti', carbRatio: 0.19, carbPerUnit: null},
+			{item: 'Banana (peel-off)', carbRatio: 0.23, carbPerUnit: null},
+			{item: 'Banana (peel-on)', carbRatio: 0.15, carbPerUnit: 26},
+			{item: 'banana bread', carbRatio: 0.5, carbPerUnit: null},
+			{item: 'Banza rice', carbRatio: 0.05, carbPerUnit: null},
+			{item: 'Barbeque sauce 1TBS (Sweet baby rays)', carbRatio: 0.5, carbPerUnit: 9},
+			{item: 'bbq (sweet baby rays)', carbRatio: 0.5, carbPerUnit: null},
+			{item: 'Biscuit', carbRatio: null, carbPerUnit: 33},
+			{item: 'Beef sticks (old wisconsin 4in)', carbRatio: 0.03, carbPerUnit: 0.5},
+			{item: 'Black beans', carbRatio: 0.13, carbPerUnit: null},
+			{item: 'Black olive cup', carbRatio: 0.07, carbPerUnit: 2.5},
+			{item: 'Bobs red mill oatmeal', carbRatio: null, carbPerUnit: 38.5},
+			{item: 'Brat (Klements hometown)', carbRatio: 0.04, carbPerUnit: 3},
+			{item: 'Bread (slice white)', carbRatio: 0.51, carbPerUnit: 26},
+			{item: 'Breakfast sausages', carbRatio: null, carbPerUnit: 0.67},
+			{item: 'Brick cheese', carbRatio: null, carbPerUnit: null},
+			{item: 'Brisket', carbRatio: null, carbPerUnit: null},
+			{item: 'Broccoli', carbRatio: 0.03, carbPerUnit: null},
+			{item: 'Broghies', carbRatio: 0.8, carbPerUnit: 0.8},
+			{item: 'Burrata', carbRatio: 0.07, carbPerUnit: null},
+			{item: 'Butter', carbRatio: 0, carbPerUnit: null},
+			{item: 'Butternut squach', carbRatio: 0.13, carbPerUnit: null},
+			{item: 'candy', carbRatio: null, carbPerUnit: 12},
+			{item: 'Candy (g)', carbRatio: 1, carbPerUnit: null},
+			{item: 'Cantaloupe', carbRatio: 0.09, carbPerUnit: null},
+			{item: 'Carbonara', carbRatio: 0.25625, carbPerUnit: null},
+			{item: 'Carrots (frozen)', carbRatio: 0.08, carbPerUnit: null},
+			{item: 'Cauliflower', carbRatio: 0.04, carbPerUnit: null},
+			{item: 'Cavatelli', carbRatio: 0.33, carbPerUnit: null},
+			{item: 'Cheddar cheese', carbRatio: null, carbPerUnit: null},
+			{item: 'Cheerios', carbRatio: 0.74, carbPerUnit: null},
+			{item: 'Cheerios honey nut', carbRatio: 0.78, carbPerUnit: null},
+			{item: 'Cheese', carbRatio: null, carbPerUnit: null},
+			{item: 'cheese curd', carbRatio: 0.02, carbPerUnit: null},
+			{item: 'Cheeseburger (McDonalds)', carbRatio: 0.29, carbPerUnit: 33},
+			{item: 'Cheez-it', carbRatio: 0.57, carbPerUnit: null},
+			{item: 'Cheez-it snaps', carbRatio: 0.63, carbPerUnit: null},
+			{item: 'Chicken breast', carbRatio: null, carbPerUnit: null},
+			{item: 'Chicken Nuggets (McDonalds)', carbRatio: 0.18, carbPerUnit: 3},
+			{item: 'Chicken tenders', carbRatio: 0.2, carbPerUnit: null},
+			{item: 'Chicken tenders light breading', carbRatio: 0.08, carbPerUnit: null},
+			{item: 'Chicken thigh (baked)', carbRatio: null, carbPerUnit: null},
+			{item: 'chicken wrapped in bacon', carbRatio: 0.02, carbPerUnit: null},
+			{item: 'Chik fil a fries', carbRatio: 0.36, carbPerUnit: null},
+			{item: 'Chik fil a nuggets', carbRatio: 0.1, carbPerUnit: null},
+			{item: 'Chocolate chip cookie', carbRatio: 0.67, carbPerUnit: null},
+			{item: 'Chocolate custard', carbRatio: null, carbPerUnit: 40},
+			{item: 'Cooked mushrooms', carbRatio: 0.05, carbPerUnit: null},
+			{item: 'Corn (frozen)', carbRatio: 0.16, carbPerUnit: null},
+			{item: 'Corn mashed potatoes', carbRatio: 0.15, carbPerUnit: null},
+			{item: 'Corn muffin', carbRatio: 0.52, carbPerUnit: null},
+			{item: 'Corn on the cob (medium large)', carbRatio: null, carbPerUnit: 12.5},
+			{item: 'Cornbread', carbRatio: 0.46, carbPerUnit: null},
+			{item: 'Cottage cheese', carbRatio: 0.04, carbPerUnit: null},
+			{item: 'crispy cocoa rice cereal', carbRatio: 0.88, carbPerUnit: null},
+			{item: 'Crispy Steak fries', carbRatio: 0.21, carbPerUnit: null},
+			{item: 'croisant', carbRatio: null, carbPerUnit: 12},
+			{item: 'Croutons', carbRatio: 0.71, carbPerUnit: null},
+			{item: 'croutons', carbRatio: 0.71, carbPerUnit: null},
+			{item: 'cucumber', carbRatio: 0.04, carbPerUnit: null},
+			{item: 'Culvers kids butterburger and fries', carbRatio: null, carbPerUnit: 74},
+			{item: 'Cupcake w/ frosting (50g)', carbRatio: 0.55, carbPerUnit: 27.5},
+			{item: 'Delafield roll', carbRatio: 0.49, carbPerUnit: 28},
+			{item: 'Deli pepperoni', carbRatio: 0.03, carbPerUnit: null},
+			{item: 'Donkey Chips', carbRatio: 0.71, carbPerUnit: null},
+			{item: 'Duck breast', carbRatio: null, carbPerUnit: null},
+			{item: 'Edamame (with shell)', carbRatio: 0.07, carbPerUnit: null},
+			{item: 'Edamame (without shell)', carbRatio: 0.13, carbPerUnit: null},
+			{item: 'Egg muffin (hash brown, cheese, ham)', carbRatio: null, carbPerUnit: 7.25},
+			{item: 'Eggo choc chip pancake', carbRatio: null, carbPerUnit: 14},
+			{item: 'Eggo waffles', carbRatio: null, carbPerUnit: 15},
+			{item: 'Eggs', carbRatio: null, carbPerUnit: null},
+			{item: 'Fish cake', carbRatio: null, carbPerUnit: 5},
+			{item: 'Fish stick', carbRatio: 0.23, carbPerUnit: 3.67},
+			{item: 'Fiber one honey clusters', carbRatio: 0.74, carbPerUnit: null},
+			{item: 'Freezie pop', carbRatio: null, carbPerUnit: 12},
+			{item: 'Freezie pop (small)', carbRatio: null, carbPerUnit: 5.5},
+			{item: 'French bread', carbRatio: 0.5, carbPerUnit: null},
+			{item: 'French fries', carbRatio: 0.2, carbPerUnit: null},
+			{item: 'French Fries (McDonalds)', carbRatio: 0.41, carbPerUnit: null},
+			{item: 'French fries crinkly cut', carbRatio: 0.17, carbPerUnit: null},
+			{item: 'French fries crinkly cut extra crispy', carbRatio: 0.2, carbPerUnit: null},
+			{item: 'French fries sweet potato', carbRatio: 0.29, carbPerUnit: null},
+			{item: 'French toast (1 piece)', carbRatio: 0.35, carbPerUnit: 26},
+			{item: 'fritos', carbRatio: 0.57, carbPerUnit: null},
+			{item: 'Fried shrimp', carbRatio: 0.27, carbPerUnit: null},
+			{item: 'Frosted mini donut', carbRatio: 0.55, carbPerUnit: 7.25},
+			{item: 'Fruit pouch', carbRatio: null, carbPerUnit: 12},
+			{item: 'Fruit snack bag', carbRatio: null, carbPerUnit: 16},
+			{item: 'Funfetti withoth frosting', carbRatio: 0.49, carbPerUnit: null},
+			{item: 'GFB', carbRatio: null, carbPerUnit: 11},
+			{item: 'GFB ball', carbRatio: null, carbPerUnit: 5},
+			{item: 'gfb bar', carbRatio: 0.48, carbPerUnit: 27},
+			{item: 'Gnocchi', carbRatio: 0.22, carbPerUnit: null},
+			{item: 'gold fish (rainbow)', carbRatio: 0.67, carbPerUnit: 17},
+			{item: 'Graham crackers', carbRatio: 0.77, carbPerUnit: 6},
+			{item: 'Granola (nature valley dark chocolate)', carbRatio: 0.57, carbPerUnit: null},
+			{item: 'Gravy', carbRatio: 0.05, carbPerUnit: null},
+			{item: 'Green beans (frozen)', carbRatio: 0.05, carbPerUnit: null},
+			{item: 'Ground beef', carbRatio: null, carbPerUnit: null},
+			{item: 'Guacamole', carbRatio: 0.1, carbPerUnit: null},
+			{item: 'Ham', carbRatio: 0.02, carbPerUnit: null},
+			{item: 'Hamburger patty', carbRatio: null, carbPerUnit: null},
+			{item: 'hard shell taco', carbRatio: null, carbPerUnit: 6},
+			{item: 'Hawaiian butter roll', carbRatio: null, carbPerUnit: 13},
+			{item: 'Hawaiian mini sub roll', carbRatio: null, carbPerUnit: 28},
+			{item: 'Hawaiian sweet roll', carbRatio: null, carbPerUnit: 15},
+			{item: 'Honeydew', carbRatio: 0.09, carbPerUnit: null},
+			{item: 'Honeynut cheerios', carbRatio: 0.77, carbPerUnit: null},
+			{item: 'Hot chocolate (8oz)', carbRatio: null, carbPerUnit: 14},
+			{item: 'Hot dog (hebrew national)', carbRatio: 0.04, carbPerUnit: 2},
+			{item: 'Hot dog (usinger beef frankfurter)', carbRatio: 0.01, carbPerUnit: 1},
+			{item: 'hot dog bun bakery', carbRatio: null, carbPerUnit: 27},
+			{item: 'hot dog usingers beef', carbRatio: null, carbPerUnit: 1},
+			{item: 'ice cream kemps bday cake', carbRatio: 0.26, carbPerUnit: 13},
+			{item: 'ice cream kemps chocolate swirl', carbRatio: 0.31, carbPerUnit: 17},
+			{item: 'ice cream kemps vanilla', carbRatio: 0.22, carbPerUnit: 11},
+			{item: 'Ice cream sandwhich (mini)', carbRatio: null, carbPerUnit: 13},
+			{item: 'itty bitty pretzels', carbRatio: 0.8, carbPerUnit: null},
+			{item: 'Jays potato chip', carbRatio: 0.5, carbPerUnit: null},
+			{item: 'Jimmy Johns Slim 1', carbRatio: null, carbPerUnit: 69},
+			{item: 'Jumbo hot dog', carbRatio: null, carbPerUnit: 3},
+			{item: 'Kit kat (two bars)', carbRatio: null, carbPerUnit: 9.8},
+			{item: 'Kit kat fun size', carbRatio: null, carbPerUnit: 5.14},
+			{item: 'kix', carbRatio: 0.84, carbPerUnit: null},
+			{item: 'L&L cookie - complete', carbRatio: 0.46, carbPerUnit: 26.5},
+			{item: 'Lasagna', carbRatio: 0.13, carbPerUnit: null},
+			{item: 'lays poppables', carbRatio: 0.57, carbPerUnit: null},
+			{item: 'Lemon poppy muffin', carbRatio: 0.55, carbPerUnit: 26},
+			{item: 'Life cereal', carbRatio: 0.79, carbPerUnit: null},
+			{item: 'Lima beans', carbRatio: 0.24, carbPerUnit: null},
+			{item: 'Lucky charms cereal', carbRatio: 0.81, carbPerUnit: null},
+			{item: 'M&Ms fun size', carbRatio: 0.75, carbPerUnit: 10.6},
+			{item: 'Mac and cheese (11/14)', carbRatio: 0.24, carbPerUnit: null},
+			{item: 'Mac and cheese (box)', carbRatio: 0.27, carbPerUnit: null},
+			{item: 'made good chocolate chip cookies', carbRatio: 0.58, carbPerUnit: 14},
+			{item: 'magic spoon fruity', carbRatio: 0.39, carbPerUnit: null},
+			{item: 'Mango', carbRatio: 0.16, carbPerUnit: null},
+			{item: 'Marinara', carbRatio: 0.07, carbPerUnit: null},
+			{item: 'Marshmallow', carbRatio: 0.83, carbPerUnit: 6},
+			{item: 'Mashed potatoes', carbRatio: 0.17, carbPerUnit: null},
+			{item: 'Meatball', carbRatio: 0.06, carbPerUnit: 2.88},
+			{item: 'Meatloaf', carbRatio: 0.05, carbPerUnit: null},
+			{item: 'Medicine (g)', carbRatio: 1, carbPerUnit: null},
+			{item: 'Milk (1 cup)', carbRatio: null, carbPerUnit: 12},
+			{item: 'Mini corn dogs', carbRatio: 0.25, carbPerUnit: 4.75},
+			{item: 'mini cupcake', carbRatio: null, carbPerUnit: 13.66},
+			{item: 'Mixed veggies (frozen)', carbRatio: 0.1, carbPerUnit: null},
+			{item: 'Mushrooms', carbRatio: 0.04, carbPerUnit: null},
+			{item: 'naan', carbRatio: 0.49, carbPerUnit: 24.5},
+			{item: 'nature valley (1 bar)', carbRatio: null, carbPerUnit: 14.5},
+			{item: 'Oatmeal (low sugar, maple)', carbRatio: null, carbPerUnit: 22},
+			{item: 'oreo', carbRatio: 0.72, carbPerUnit: 8.33},
+			{item: 'Outshine big pineapple', carbRatio: null, carbPerUnit: 18},
+			{item: 'outshine popsicle', carbRatio: null, carbPerUnit: 11},
+			{item: 'outshine popsicle sugar free', carbRatio: null, carbPerUnit: 6},
+			{item: 'pancake', carbRatio: 0.56, carbPerUnit: null},
+			{item: 'Papaya', carbRatio: 0.1, carbPerUnit: null},
+			{item: 'Party potatos', carbRatio: 0.13, carbPerUnit: null},
+			{item: 'Pasta (dry)', carbRatio: 0.73, carbPerUnit: null},
+			{item: 'Pasta salad', carbRatio: 0.23, carbPerUnit: null},
+			{item: 'PB Ritz (per cookie)', carbRatio: null, carbPerUnit: 3.67},
+			{item: 'PBJ (1/2TBS PB, 1TSP J)', carbRatio: null, carbPerUnit: 32},
+			{item: 'Peanut butter', carbRatio: 0.21, carbPerUnit: 11},
+			{item: 'Peanut butter M&Ms', carbRatio: 0.57, carbPerUnit: null},
+			{item: 'Peanuts (1 cup in the shell)', carbRatio: null, carbPerUnit: 5},
+			{item: 'Peanuts (shelled)', carbRatio: 0.14, carbPerUnit: null},
+			{item: 'Peas (frozen)', carbRatio: 0.11, carbPerUnit: null},
+			{item: 'peas and carrots', carbRatio: 0.12, carbPerUnit: null},
+			{item: 'pecans', carbRatio: 0.14, carbPerUnit: null},
+			{item: 'Penne and tomato cream sauce', carbRatio: 0.26, carbPerUnit: null},
+			{item: 'Pez (each)', carbRatio: null, carbPerUnit: 0.75},
+			{item: 'pirates booty', carbRatio: 0.64, carbPerUnit: null},
+			{item: 'Pizza hut slice (pepperoni)', carbRatio: 0.3, carbPerUnit: 36.5},
+			{item: 'Pita', carbRatio: null, carbPerUnit: 38},
+			{item: 'Popcorn (1 cup)', carbRatio: 0.56, carbPerUnit: 3.75},
+			{item: 'popcorn boom chickapop', carbRatio: 0.59, carbPerUnit: 10},
+			{item: 'Popcorn cheesey Cretor (1 3/4 cup)', carbRatio: 0.36, carbPerUnit: 10},
+			{item: 'Poptart', carbRatio: null, carbPerUnit: 34.5},
+			{item: 'Poptart minis', carbRatio: 0.73, carbPerUnit: 29},
+			{item: 'Pork loin', carbRatio: null, carbPerUnit: null},
+			{item: 'Pork ribs', carbRatio: null, carbPerUnit: null},
+			{item: 'Pot pie (test kitchen)', carbRatio: 0.12, carbPerUnit: null},
+			{item: 'Potato salad', carbRatio: 0.14, carbPerUnit: null},
+			{item: 'Pringles cup', carbRatio: null, carbPerUnit: 11},
+			{item: 'Pringles snack pack', carbRatio: null, carbPerUnit: 11},
+			{item: 'Protein bar unit', carbRatio: 1, carbPerUnit: 1},
+			{item: 'Pulled pork', carbRatio: null, carbPerUnit: null},
+			{item: 'Pumpkin Choc Chip Muffin', carbRatio: 0.49, carbPerUnit: 78},
+			{item: 'Pumpkin pie', carbRatio: 0.28, carbPerUnit: 38.9},
+			{item: 'Queso', carbRatio: 0.05, carbPerUnit: null},
+			{item: 'Red peppers', carbRatio: 0.07, carbPerUnit: null},
+			{item: 'Reeses PB cup', carbRatio: null, carbPerUnit: 12},
+			{item: 'Reeses take 5', carbRatio: 0.62, carbPerUnit: null},
+			{item: 'refried beans', carbRatio: 0.14, carbPerUnit: null},
+			{item: 'refried beans', carbRatio: 0.16, carbPerUnit: null},
+			{item: 'Rice (Basmati)', carbRatio: 0.3, carbPerUnit: null},
+			{item: 'Rice noodles', carbRatio: 0.29, carbPerUnit: null},
+			{item: 'Rice (microwave with veggies)', carbRatio: 0.21, carbPerUnit: null},
+			{item: 'Rice crispie', carbRatio: null, carbPerUnit: 8},
+			{item: 'Ritz cracker', carbRatio: 0.63, carbPerUnit: 2},
+			{item: 'roll', carbRatio: null, carbPerUnit: 13},
+			{item: 'Ruffles', carbRatio: 0.54, carbPerUnit: null},
+			{item: 'Scrambled egg (1 egg, 1/2TBs milk, 1/2tsp butter)', carbRatio: null, carbPerUnit: 1},
+			{item: 'Sendiks classic trail mix', carbRatio: 0.22, carbPerUnit: null},
+			{item: 'Sendiks tortilla chips', carbRatio: 0.68, carbPerUnit: null},
+			{item: 'Sherbert kemps', carbRatio: 0.31, carbPerUnit: 20},
+			{item: 'Shredded cheese', carbRatio: 0.04, carbPerUnit: null},
+			{item: 'Skirt Steak', carbRatio: null, carbPerUnit: null},
+			{item: 'Smore', carbRatio: null, carbPerUnit: 26},
+			{item: 'Spaghetti', carbRatio: 0.2, carbPerUnit: null},
+			{item: 'star puffed crackers', carbRatio: 0.67, carbPerUnit: null},
+			{item: 'Steak', carbRatio: null, carbPerUnit: null},
+			{item: 'Steak fries (ore ida golden)', carbRatio: 0.17, carbPerUnit: null},
+			{item: 'String cheese', carbRatio: null, carbPerUnit: null},
+			{item: 'Stroganoff (mushroom)', carbRatio: 0.16, carbPerUnit: null},
+			{item: 'Sugar cookie', carbRatio: 0.5, carbPerUnit: null},
+			{item: 'Sugar snap peas', carbRatio: 0.08, carbPerUnit: null},
+			{item: 'Sweet potato', carbRatio: 0.21, carbPerUnit: null},
+			{item: 'sweet potato', carbRatio: 0.31, carbPerUnit: null},
+			{item: 'Syrup (ml)', carbRatio: null, carbPerUnit: 0.9},
+			{item: 'Taco meat', carbRatio: 0.04, carbPerUnit: null},
+			{item: 'Tater tots', carbRatio: 0.15, carbPerUnit: null},
+			{item: 'Teddy grahams', carbRatio: 0.73, carbPerUnit: null},
+			{item: 'Trail mix baggie (homemade)', carbRatio: 0.31, carbPerUnit: 15},
+			{item: 'Tortelloni and sauce', carbRatio: 0.26, carbPerUnit: 29.32},
+			{item: 'Tortilla (corn small)', carbRatio: null, carbPerUnit: 10},
+			{item: 'Tortilla (flour medium)', carbRatio: 0.51, carbPerUnit: 23},
+			{item: 'Tortilla (flour small)', carbRatio: 0.5, carbPerUnit: 16},
+			{item: 'Tortilla chips', carbRatio: 0.64, carbPerUnit: null},
+			{item: 'Tostados', carbRatio: 0.56, carbPerUnit: 6},
+			{item: 'tostitos', carbRatio: 0.64, carbPerUnit: null},
+			{item: 'Turkey', carbRatio: null, carbPerUnit: null},
+			{item: 'Uncrustable', carbRatio: null, carbPerUnit: 22},
+			{item: 'veggie crisps', carbRatio: 0.71, carbPerUnit: null},
+			{item: 'Veggie straws (bag)', carbRatio: 0.61, carbPerUnit: 12},
+			{item: 'waffle fires', carbRatio: 0.17, carbPerUnit: null},
+			{item: 'Walnuts', carbRatio: 0.14, carbPerUnit: null},
+			{item: 'Watermelon', carbRatio: 0.08, carbPerUnit: null},
+			{item: 'whopper', carbRatio: 0.76, carbPerUnit: null},
+			{item: 'Wild rice', carbRatio: 0.21, carbPerUnit: null},
+			{item: 'Yogurt (activa vanilla regular smal)', carbRatio: null, carbPerUnit: 15},
+			{item: 'Yogurt (chobani greek vanilla)', carbRatio: 0.09, carbPerUnit: 15},
+			{item: 'Yogurt (probiotic greek vanilla)', carbRatio: 0.15, carbPerUnit: 23},
+			{item: 'Yogurt (sugar freechobani greek vanilla)', carbRatio: 0.04, carbPerUnit: 5},
+			{item: 'Zbar', carbRatio: 0.61, carbPerUnit: 22},
+			{item: 'zucchini', carbRatio: 0.04, carbPerUnit: null},
+        ];
+
+        const foodInput = document.getElementById('food-input');
+        const mealTableBody = document.getElementById('meal-table').querySelector('tbody');
+        const totalCarbsDiv = document.getElementById('total-carbs');
+
+        let totalCarbs = 0;
+
+        foodInput.addEventListener('input', function() {
+            const value = this.value.toLowerCase();
+            closeAllLists();
+            if (!value) return false;
+
+            const autocompleteList = document.createElement('div');
+            autocompleteList.setAttribute('id', this.id + 'autocomplete-list');
+            autocompleteList.setAttribute('class', 'autocomplete-items');
+            this.parentNode.appendChild(autocompleteList);
+
+            foodData.forEach(food => {
+                if (food.item.toLowerCase().includes(value)) {
+                    const itemDiv = document.createElement('div');
+                    itemDiv.innerHTML = `<strong>${food.item.substr(0, value.length)}</strong>${food.item.substr(value.length)}`;
+                    itemDiv.innerHTML += `<input type='hidden' value='${food.item}'>`;
+                    itemDiv.addEventListener('click', function() {
+                        foodInput.value = this.getElementsByTagName('input')[0].value;
+                        closeAllLists();
+                    });
+                    autocompleteList.appendChild(itemDiv);
+                }
+            });
+        });
+
+        function closeAllLists(elmnt) {
+            const items = document.getElementsByClassName('autocomplete-items');
+            for (let i = 0; i < items.length; i++) {
+                if (elmnt != items[i] && elmnt != foodInput) {
+                    items[i].parentNode.removeChild(items[i]);
+                }
+            }
+        }
+
+        document.addEventListener('click', function (e) {
+            closeAllLists(e.target);
+        });
+
+        function addItem() {
+            const selectedItem = foodInput.value;
+            const quantity = parseFloat(document.getElementById('quantity').value);
+            const weight = parseFloat(document.getElementById('weight').value);
+
+            if ((isNaN(quantity) || quantity <= 0) && (isNaN(weight) || weight <= 0)) {
+                alert('Please enter a valid quantity or weight.');
+                return;
+            }
+
+            if (!isNaN(quantity) && !isNaN(weight) && quantity > 0 && weight > 0) {
+                alert('Please enter only one of quantity or weight.');
+                return;
+            }
+
+            const food = foodData.find(f => f.item === selectedItem);
+
+            if (!food) {
+                alert('Please select a valid food item.');
+                return;
+            }
+
+            let carbs;
+            if (!isNaN(quantity) && quantity > 0) {
+                if (food.carbPerUnit) {
+                    carbs = food.carbPerUnit * quantity;
+                } else {
+                    alert('Carb per unit information not available for this item.');
+                    return;
+                }
+            } else if (!isNaN(weight) && weight > 0) {
+                if (food.carbRatio) {
+                    carbs = food.carbRatio * weight;
+                } else {
+                    alert('Carb ratio information not available for this item.');
+                    return;
+                }
+            }
+
+            totalCarbs += carbs;
+
+            const row = document.createElement('tr');
+            row.innerHTML = `<td>${selectedItem}</td><td>${quantity > 0 ? quantity : ''}</td><td>${weight > 0 ? weight : ''}</td><td>${carbs.toFixed(2)}</td>`;
+            mealTableBody.appendChild(row);
+
+            totalCarbsDiv.textContent = `Total Carbs: ${totalCarbs.toFixed(2)}`;
+
+            foodInput.value = '';
+            document.getElementById('quantity').value = '';
+            document.getElementById('weight').value = '';
+        }
+    </script>
+</body>
+</html>
